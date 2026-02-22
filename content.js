@@ -261,25 +261,11 @@ function injectButton() {
   if (document.getElementById(BUTTON_ID)) return;
 
   // Are we in a thread view?
-  if (!document.querySelector('h2.hP') && !document.querySelector('div[role="main"] h2')) return;
+  if (!isThreadView()) return;
 
   const btn = createButton();
 
-  // Try to inject in Gmail's toolbar
-  const toolbar = document.querySelector('.ade');
-  if (toolbar) {
-    toolbar.appendChild(btn);
-    return;
-  }
-
-  // Fallback: look for the action bar above messages
-  const actionBar = document.querySelector('.iH > div');
-  if (actionBar) {
-    actionBar.appendChild(btn);
-    return;
-  }
-
-  // Last fallback: floating button
+  // Always use floating button — Gmail toolbar classes are unreliable
   btn.classList.add('mtc-floating');
   document.body.appendChild(btn);
 }
@@ -292,10 +278,37 @@ function removeButton() {
 // ─── Observer ───────────────────────────────────────────────────────
 
 function isThreadView() {
-  return !!(document.querySelector('h2.hP') || document.querySelector('div[role="main"] h2'));
+  // Signal 1: Gmail's subject heading
+  if (document.querySelector('h2.hP')) return true;
+
+  // Signal 2: h2 inside the main content area
+  const mainArea = document.querySelector('div[role="main"]');
+  if (mainArea && mainArea.querySelector('h2')) return true;
+
+  // Signal 3: message body containers
+  if (document.querySelector('.a3s.aiL')) return true;
+
+  // Signal 4: sender elements with email attribute (specific to thread view)
+  if (document.querySelector('.gD[email]')) return true;
+
+  // Signal 5: reply/forward action buttons at the bottom of a thread
+  // Gmail shows "Répondre" / "Reply" buttons only in thread view
+  const replyBtns = document.querySelectorAll('span[role="link"]');
+  for (const btn of replyBtns) {
+    const text = btn.textContent.trim().toLowerCase();
+    if (text === 'répondre' || text === 'reply' || text === 'répondre à tous' || text === 'reply all') {
+      return true;
+    }
+  }
+
+  // Signal 6: URL contains a message ID hash (e.g. #inbox/FMfcg...)
+  if (location.hash && /^#[a-z]+\/[A-Za-z0-9]+$/.test(location.hash)) return true;
+
+  return false;
 }
 
 let wasThreadView = false;
+let checkTimeout = null;
 
 function checkView() {
   const inThread = isThreadView();
@@ -308,11 +321,16 @@ function checkView() {
   wasThreadView = inThread;
 }
 
+// Debounced observer to avoid excessive checks
 const observer = new MutationObserver(() => {
-  checkView();
+  if (checkTimeout) clearTimeout(checkTimeout);
+  checkTimeout = setTimeout(checkView, 200);
 });
 
 observer.observe(document.body, { childList: true, subtree: true });
 
-// Initial check
-checkView();
+// Initial check (with delay for Gmail to fully load)
+console.log('[Mail to Claude] Content script loaded');
+setTimeout(checkView, 1000);
+// Also watch for hash changes (Gmail navigation)
+window.addEventListener('hashchange', () => setTimeout(checkView, 500));
