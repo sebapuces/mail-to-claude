@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Mail to Claude — Options</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Mail to Claude</h1>
+    <p class="description">Configurez le prompt envoyé à Claude avec le fil d'email.</p>
+
+    <label for="prompt">Prompt</label>
+    <textarea id="prompt" rows="12" spellcheck="false"></textarea>
+
+    <div class="actions">
+      <button id="save" class="btn btn-primary">Sauvegarder</button>
+      <button id="restore" class="btn btn-secondary">Restaurer le texte par défaut</button>
+    </div>
+
+    <div id="status" class="status" hidden></div>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>
